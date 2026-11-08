@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="QuickRead — быстрое чтение по одному слову (RSVP). Работает без интернета.">
+  <meta name="theme-color" content="#151517">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QuickRead">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <title>QuickRead</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.6v12.8c0 .8.9 1.3 1.6.9l10-6.4c.6-.4.6-1.3 0-1.7l-10-6.4C8.9 4.3 8 4.8 8 5.6z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M9.5 6.5 15 12l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-prevs" viewBox="0 0 24 24"><path d="M6.5 6v12M17 6.5 11.5 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-nexts" viewBox="0 0 24 24"><path d="M17.5 6v12M7 6.5l5.5 5.5L7 17.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M5 6.5h14M5 10.5h14M5 14.5h14M5 18.5h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <header class="titlebar">
+    <div class="doc-name" id="docName"></div>
+    <div class="tb-actions">
+      <button class="tb-btn" id="installBtn" hidden>Установить</button>
+      <button class="tb-btn" id="btnOpen" title="Открыть файл (⌘O)">Открыть</button>
+      <button class="tb-btn" id="btnClip" title="Читать из буфера обмена (⇧⌘V)">Из буфера</button>
+      <button class="tb-btn icon" id="btnText" title="Показать текст (⌘E)"><svg><use href="#i-doc"/></svg></button>
+      <button class="tb-btn icon" id="btnSettings" title="Настройки (⌘,)"><svg><use href="#i-gear"/></svg></button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="empty" id="empty" hidden>
+      <div class="empty-title">Что почитаем?</div>
+      <div class="empty-actions">
+        <button class="big-btn" data-act="clipboard"><span>Из буфера обмена</span><kbd>⇧⌘V</kbd></button>
+        <button class="big-btn" data-act="open"><span>Открыть файл</span><kbd>⌘O</kbd></button>
+        <button class="big-btn" data-act="editor"><span>Вставить текст</span><kbd>⌘E</kbd></button>
+      </div>
+      <div class="empty-hint">или перетащите файл в окно — txt, pdf, docx, epub, fb2, md, html</div>
+      <div class="empty-hint">Скопируйте текст где угодно и нажмите «Из буфера обмена»</div>
+    </div>
+
+    <div class="rsvp" id="rsvp" hidden>
+      <div class="guide top"></div>
+      <div class="word" id="word"><span class="l" id="wl"></span><span class="p" id="wp"></span><span class="r" id="wr"></span></div>
+      <div class="guide bottom"></div>
+    </div>
+
+    <div class="context" id="context"></div>
+  </main>
+
+  <section class="editor" id="editor" hidden>
+    <div class="editor-bar">
+      <span class="editor-title">Текст</span>
+      <span class="editor-count" id="edCount"></span>
+      <span class="spacer"></span>
+      <button class="ghost-btn" id="edClear">Очистить</button>
+      <button class="ghost-btn" id="edStart">С начала</button>
+      <button class="primary-btn" id="edCursor" title="Начать с места, где стоит курсор (⌘↩)">Читать отсюда <kbd>⌘↩</kbd></button>
+    </div>
+    <textarea id="textarea" spellcheck="false" placeholder="Вставьте сюда текст (⌘V). Поставьте курсор, откуда начать, и нажмите ⌘↩"></textarea>
+  </section>
+
+  <footer class="controls">
+    <input type="range" class="progress" id="progress" min="0" max="0" value="0" step="1" aria-label="Позиция в тексте">
+    <div class="ctrl-row">
+      <div class="stats">
+        <span id="pos"></span>
+        <span class="dot" id="dot1">·</span>
+        <span id="left"></span>
+      </div>
+
+      <div class="transport">
+        <button class="t-btn" id="btnPrevS" title="Предыдущее предложение (⇧←)"><svg><use href="#i-prevs"/></svg></button>
+        <button class="t-btn" id="btnBack" title="Назад (←)"><svg><use href="#i-back"/></svg></button>
+        <button class="play" id="btnPlay" title="Старт / пауза (пробел)">
+          <svg class="ic-play"><use href="#i-play"/></svg>
+          <svg class="ic-pause"><use href="#i-pause"/></svg>
+        </button>
+        <button class="t-btn" id="btnFwd" title="Вперёд (→)"><svg><use href="#i-fwd"/></svg></button>
+        <button class="t-btn" id="btnNextS" title="Следующее предложение (⇧→)"><svg><use href="#i-nexts"/></svg></button>
+      </div>
+
+      <div class="right-ctrls">
+        <div class="speed" title="Скорость (↑ / ↓)">
+          <button class="s-btn" id="slower" aria-label="Медленнее">−</button>
+          <div class="wpm"><span id="wpmVal">350</span><small>сл/мин</small></div>
+          <button class="s-btn" id="faster" aria-label="Быстрее">+</button>
+        </div>
+        <div class="seg" id="chunkSeg" title="Слов за раз">
+          <button data-chunk="1">1</button>
+          <button data-chunk="2">2</button>
+          <button data-chunk="3">3</button>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="popover" id="settings" hidden>
+    <div class="pop-row">
+      <label for="wpmRange">Скорость</label>
+      <span class="pop-val" id="wpmRangeVal"></span>
+    </div>
+    <input type="range" id="wpmRange" min="100" max="1500" step="25">
+
+    <div class="pop-row">
+      <label for="fontRange">Размер слова</label>
+      <span class="pop-val" id="fontVal"></span>
+    </div>
+    <input type="range" id="fontRange" min="28" max="150" step="2">
+
+    <div class="pop-label">Шрифт</div>
+    <div class="seg wide" id="fontSeg">
+      <button data-font="sans">Обычный</button>
+      <button data-font="serif">С засечками</button>
+      <button data-font="mono">Моно</button>
+    </div>
+
+    <div class="pop-label">Тема</div>
+    <div class="seg wide" id="themeSeg">
+      <button data-theme-opt="auto">Авто</button>
+      <button data-theme-opt="light">Светлая</button>
+      <button data-theme-opt="sepia">Сепия</button>
+      <button data-theme-opt="dark">Тёмная</button>
+    </div>
+
+    <label class="check"><input type="checkbox" id="smartToggle"> Паузы на знаках препинания и абзацах</label>
+    <label class="check"><input type="checkbox" id="contextToggle"> Показывать текст вокруг слова на паузе</label>
+
+    <div class="pop-foot" id="hotkeyInfo">Пробел — старт и пауза, ← → — по словам, ↑ ↓ — скорость. На телефоне — касание слова.</div>
+  </div>
+
+  <div class="drop-overlay"><div>Отпустите, чтобы открыть</div></div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <div class="install" id="installGuide" hidden>
+    <div class="ig-card" role="dialog" aria-labelledby="igTitle">
+      <button class="ig-close" type="button" aria-label="Закрыть">×</button>
+      <div class="ig-icon"><img src="icon-180.png" alt=""></div>
+      <h3 id="igTitle">Поставьте QuickRead на экран «Домой»</h3>
+      <p class="ig-lead">Будет открываться как приложение: на весь экран и без интернета.</p>
+      <ol class="ig-steps">
+        <li><span class="ig-n">1</span><span>Нажмите <b>«Поделиться»</b> <svg class="ig-share" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10H5.5A1.5 1.5 0 0 0 4 11.5v8A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> внизу экрана Safari (на iPad — вверху справа).</span></li>
+        <li><span class="ig-n">2</span><span>Пролистайте меню и выберите <b>«На экран „Домой“»</b>. Если пункта не видно — нажмите «Ещё» или «Править действия».</span></li>
+        <li><span class="ig-n">3</span><span>Нажмите <b>«Добавить»</b> в правом верхнем углу. Значок QuickRead появится на главном экране.</span></li>
+      </ol>
+      <p class="ig-note" id="installNote"></p>
+      <div class="ig-arrow" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <script src="platform.js"></script>
+  <script src="reader.js"></script>
+</body>
+</html>
